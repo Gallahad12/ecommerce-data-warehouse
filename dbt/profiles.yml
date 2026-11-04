@@ -1,0 +1,17 @@
+olist_warehouse:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('GCP_PROJECT_ID', 'local-project') }}"
+      dataset: "{{ env_var('BQ_DW_DATASET', 'olist_dw') }}"
+      location: "{{ env_var('BQ_LOCATION', 'US') }}"
+      threads: 4
+      job_execution_timeout_seconds: 300
+    # Runs in GitHub Actions against sample data, so CI needs no cloud credentials.
+    ci:
+      type: duckdb
+      path: ci.duckdb
+      schema: olist_dw
+      threads: 1

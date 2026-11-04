@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: int_order_payments
+    description: Payments rolled up to one row per order.
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+
+  - name: int_order_reviews
+    description: The latest review for each order.
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
