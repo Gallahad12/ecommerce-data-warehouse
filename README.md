@@ -2,7 +2,9 @@
 
 An end-to-end batch ELT pipeline that turns raw e-commerce data into a tested star schema in BigQuery, orchestrated with Apache Airflow and modeled with dbt.
 
-> Status: the pipeline runs end to end on the full dataset. The dashboard is still to come.
+**[View the live dashboard](https://datastudio.google.com/s/pjhwMohMZ4o)**
+
+![Olist e-commerce performance dashboard](docs/dashboard.jpg)
 
 ## Business goal
 
@@ -33,6 +35,7 @@ flowchart LR
 | Transformation | dbt, SQL |
 | Data quality | dbt tests, dbt_utils |
 | CI | GitHub Actions, DuckDB |
+| Dashboard | Data Studio (formerly Looker Studio) |
 
 ## Data model
 
@@ -44,6 +47,8 @@ flowchart LR
 | `dim_products` | One row per product |
 | `dim_sellers` | One row per seller |
 | `dim_date` | One row per calendar day |
+| `rpt_orders` | Flat dashboard table, one row per order |
+| `rpt_order_items` | Flat dashboard table, one row per item in an order |
 
 ## Design decisions
 

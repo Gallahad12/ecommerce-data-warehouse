@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: rpt_orders
+    description: Denormalized order table that feeds the dashboard.
+    data_tests:
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('fct_orders')
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: delivery_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [Late, On time, Not delivered]
+
+  - name: rpt_order_items
+    description: Denormalized order item table that feeds the dashboard.
+    data_tests:
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('fct_order_items')
+    columns:
+      - name: order_item_key
+        data_tests: [unique, not_null]
