@@ -6,3 +6,8 @@ RUN pip install --no-cache-dir -r /requirements-airflow.txt
 # dbt runs from its own virtualenv so its dependencies cannot conflict with Airflow.
 RUN python -m venv /home/airflow/dbt-venv \
     && /home/airflow/dbt-venv/bin/pip install --no-cache-dir "dbt-core~=1.12.0" "dbt-bigquery~=1.12.0"
+
+# Great Expectations gets its own virtualenv for the same reason.
+COPY requirements-gx.txt /requirements-gx.txt
+RUN python -m venv /home/airflow/gx-venv \
+    && /home/airflow/gx-venv/bin/pip install --no-cache-dir -r /requirements-gx.txt
