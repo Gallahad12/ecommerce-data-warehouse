@@ -16,13 +16,16 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install "dbt-core~=1.12.0" dbt-duckdb duckdb
+        run: pip install "dbt-core~=1.12.0" dbt-duckdb duckdb -r requirements-gx.txt
 
       - name: Check Python syntax
-        run: python -m py_compile dags/olist_warehouse.py scripts/load_raw.py scripts/load_sample_duckdb.py
+        run: python -m py_compile dags/olist_warehouse.py scripts/load_raw.py scripts/load_sample_duckdb.py scripts/validate_raw.py
 
       - name: Load sample data
         run: python scripts/load_sample_duckdb.py
+
+      - name: Validate raw data
+        run: python scripts/validate_raw.py --target sample
 
       - name: Build and test models
         working-directory: dbt

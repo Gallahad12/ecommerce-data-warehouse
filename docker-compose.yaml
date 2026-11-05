@@ -15,6 +15,7 @@ x-airflow-common: &airflow-common
     - ./data:/opt/airflow/data
     - ./keys:/opt/airflow/keys:ro
     - ./logs:/opt/airflow/logs
+    - ./reports:/opt/airflow/reports
   user: "${AIRFLOW_UID:-50000}:0"
 
 services:

@@ -29,11 +29,13 @@ flowchart LR
     A[File CSV Olist] --> B[Python loader]
     B --> C[Google Cloud Storage]
     C --> D[BigQuery raw dataset]
-    D --> E[dbt staging]
+    D --> V[Great Expectations]
+    V --> E[dbt staging]
     E --> F[dbt intermediate]
     F --> G[dbt marts: star schema]
     G --> H[Dashboard]
     I[Apache Airflow] -. orkestrasi .-> B
+    I -. orkestrasi .-> V
     I -. orkestrasi .-> E
     J[GitHub Actions] -. tes tiap PR .-> E
 ```
@@ -45,7 +47,7 @@ flowchart LR
 | Orkestrasi | Apache Airflow, Docker Compose |
 | Penyimpanan | Google Cloud Storage, BigQuery |
 | Transformasi | dbt, SQL |
-| Data quality | dbt tests, dbt_utils |
+| Data quality | Great Expectations, dbt tests, dbt_utils |
 | CI | GitHub Actions, DuckDB |
 | Dashboard | Data Studio (sebelumnya Looker Studio) |
 
@@ -62,6 +64,24 @@ flowchart LR
 | `rpt_orders` | Tabel datar untuk dashboard, satu baris per order |
 | `rpt_order_items` | Tabel datar untuk dashboard, satu baris per item dalam order |
 
+## Validasi data
+
+Task `validate_raw` di Airflow berjalan setelah data dimuat dan sebelum dbt. Kalau ada satu cek yang gagal, DAG berhenti, sehingga dbt tidak membangun ulang tabel dashboard dari data yang rusak.
+
+Great Expectations menjalankan 75 cek pada 8 tabel raw, dan query-nya berjalan di BigQuery:
+
+| Jenis cek | Contoh |
+|---|---|
+| Struktur tabel | Nama kolom harus sama persis dengan yang diharapkan |
+| Kelengkapan load | Jumlah baris `orders` minimal 90.000 |
+| Primary key | `order_id` tidak null dan unik, `order_id` + `order_item_id` unik |
+| Nilai yang diizinkan | `order_status`, `payment_type`, dan `review_score` |
+| Format | Timestamp, angka, kode pos, dan kode negara bagian |
+
+Pembagian tugasnya: Great Expectations memeriksa data mentah saat masuk, sedangkan dbt tests memeriksa hasil transformasi, termasuk relasi antartabel.
+
+Laporan HTML (Data Docs) dibuat di `reports/data_docs/index.html` setiap kali validasi berjalan.
+
 ## Keputusan desain
 
 - **Semua kolom di tabel raw bertipe string.** Tipe data diubah di dbt staging, supaya nilai yang salah terlihat di model, bukan menggagalkan proses load.
@@ -69,7 +89,8 @@ flowchart LR
 - **Review diringkas menjadi satu per order** sebelum di-join, karena sebagian order punya beberapa review yang bisa terhitung ganda.
 - **Tabel fact dipartisi per bulan dan di-cluster** pada kolom yang sering difilter, supaya data yang dipindai BigQuery lebih sedikit.
 - **Tidak memakai service account key.** Pipeline memakai impersonation lewat Application Default Credentials, sehingga tidak ada key jangka panjang yang dibuat.
-- **CI berjalan di DuckDB dengan data sampel,** sehingga model dan test diuji di setiap pull request tanpa kredensial atau biaya cloud.
+- **CI berjalan di DuckDB dengan data sampel,** sehingga model dan test diuji di setiap pull request tanpa kredensial atau biaya cloud. Great Expectations tidak mendukung DuckDB secara resmi, jadi di CI validasinya membaca CSV sampel dengan pandas.
+- **Great Expectations punya virtualenv sendiri,** seperti dbt, supaya dependensinya tidak bentrok dengan Airflow.
 
 ## Cara menjalankan
 
@@ -87,8 +108,9 @@ flowchart LR
 ## Pengujian tanpa GCP
 
 ```bash
-pip install "dbt-core~=1.12.0" dbt-duckdb duckdb
+pip install "dbt-core~=1.12.0" dbt-duckdb duckdb -r requirements-gx.txt
 python scripts/load_sample_duckdb.py
+python scripts/validate_raw.py --target sample
 cd dbt
 dbt deps --profiles-dir .
 dbt build --target ci --profiles-dir .
@@ -96,7 +118,7 @@ dbt build --target ci --profiles-dir .
 
 ## Hasil
 
-Pipeline memuat sekitar 550.000 baris data mentah dari 8 tabel. Semua model dan test dbt berjalan tanpa error, dengan 1 peringatan yang dijelaskan di bagian tantangan.
+Pipeline memuat sekitar 550.000 baris data mentah dari 8 tabel. Semua 75 cek Great Expectations lolos. Semua model dan test dbt berjalan tanpa error, dengan 1 peringatan yang dijelaskan di bagian tantangan.
 
 | Metrik | Nilai |
 |---|---|
